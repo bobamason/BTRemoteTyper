@@ -5,23 +5,49 @@
  */
 package net.masonapps.btremotetyper;
 
+import java.awt.AWTException;
+import java.awt.Robot;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.bluetooth.UUID;
+import javax.swing.SwingUtilities;
 
 /**
  *
- * @author ims_3
+ * @author Bob Mason
  */
 public class BTRemoteApplication extends javax.swing.JFrame {
+
+    private static final int PORT = 4422;
+    private final RobotTyper robotTyper;
+    private BTComm btComm;
+    private final StringBuilder stringBuilder = new StringBuilder();
 
     /**
      * Creates new form BTSettingsFrame
      */
     public BTRemoteApplication() {
         initComponents();
+        Robot robot = null;
+        try {
+            robot = new Robot();
+        } catch (AWTException ex) {
+            Logger.getLogger(BTRemoteApplication.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        robotTyper = new RobotTyper(robot, 25);
     }
 
     private void startBluetoothComm() {
-        new BTComm(BTRemoteApplication.this, new UUID(0x1101)).start();
+        btComm = new BTComm(BTRemoteApplication.this, new UUID(80087355));
+        btComm.start();
+        addMessage("initializing bluetooth...");
     }
 
     /**
@@ -33,17 +59,30 @@ public class BTRemoteApplication extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jTextArea1 = new javax.swing.JTextArea();
+
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        jTextArea1.setColumns(20);
+        jTextArea1.setRows(5);
+        jScrollPane1.setViewportView(jTextArea1);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 468, Short.MAX_VALUE)
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 300, Short.MAX_VALUE)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 308, Short.MAX_VALUE)
+                .addContainerGap())
         );
 
         pack();
@@ -87,10 +126,63 @@ public class BTRemoteApplication extends javax.swing.JFrame {
         });
     }
 
-    void onLineRecieved(String line) {
+    @Override
+    public void dispose() {
+        super.dispose(); //To change body of generated methods, choose Tools | Templates.
+        if (btComm != null) {
+            try {
+                btComm.close();
+            } catch (IOException ex) {
+                Logger.getLogger(BTRemoteApplication.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            btComm = null;
+        }
+    }
+
+    public void onLineRecieved(final String line) {
         System.out.println("line recieved: " + line);
+        SwingUtilities.invokeLater(() -> {
+            if (line.startsWith("p:") && line.length() > 2) {
+                String str = line.substring(2);
+                addMessage("typing: " + str);
+                robotTyper.type(str);
+            }
+        });
+    }
+
+    public void addMessage(final String msg) {
+        SwingUtilities.invokeLater(() -> {
+            stringBuilder.append(msg).append("\n");
+            jTextArea1.setText(stringBuilder.toString());
+            jTextArea1.setAutoscrolls(true);
+        });
+    }
+
+    private void connectUsingWifi() {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("server created at " + InetAddress.getLocalHost().getHostAddress());
+            while (true) {
+                Socket socket = serverSocket.accept();
+                System.out.println("connection accepted from " + ((InetSocketAddress) socket.getRemoteSocketAddress()).getHostName());
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                String line = "";
+                while ((line = reader.readLine()) != null) {
+                    System.out.println(line);
+                    if (line.startsWith("p:")) {
+                        String str = line.substring(2);
+                        System.out.println("robot typing: " + str);
+                        robotTyper.type(str);
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(BTRemoteApplication.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JTextArea jTextArea1;
     // End of variables declaration//GEN-END:variables
+
 }

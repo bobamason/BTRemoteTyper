@@ -5,7 +5,6 @@
  */
 package net.masonapps.btremotetyper;
 
-import com.intel.bluetooth.RemoteDeviceHelper;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -14,22 +13,19 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.bluetooth.BluetoothStateException;
 import javax.bluetooth.DiscoveryAgent;
 import javax.bluetooth.LocalDevice;
 import javax.bluetooth.RemoteDevice;
 import javax.bluetooth.UUID;
-import javax.microedition.io.Connection;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 import javax.microedition.io.StreamConnectionNotifier;
-import javax.swing.SwingUtilities;
 
 /**
  *
  * @author ims_3
  */
-public class BTComm extends Thread implements Closeable{
+public class BTComm extends Thread implements Closeable {
 
     private final BTRemoteApplication application;
     private BufferedWriter writer = null;
@@ -50,30 +46,30 @@ public class BTComm extends Thread implements Closeable{
             String connectionStr = "btspp://localhost:" + uuid + ";name=RemoteBluetooth";
             StreamConnectionNotifier streamConnNotifier = (StreamConnectionNotifier) Connector.open(connectionStr);
             System.out.println("BT server started");
+            application.addMessage("please connect android phone to " + localDevice.getFriendlyName());
             StreamConnection connection = streamConnNotifier.acceptAndOpen();
+            System.out.println("connection accepted");
             RemoteDevice device = RemoteDevice.getRemoteDevice(connection);
             System.out.print("connected to device: " + device.getBluetoothAddress());
-            
+            application.addMessage("connected to device: " + device.getFriendlyName(true));
+
             reader = new BufferedReader(new InputStreamReader(connection.openInputStream()));
             writer = new BufferedWriter(new OutputStreamWriter(connection.openOutputStream()));
-            
-            while(true){
+
+            while (true) {
                 String line;
-                while((line = reader.readLine()) != null){
-                    System.out.println("line read: " + line);
-                    final String cpy = line + "";
-                    SwingUtilities.invokeLater(() -> {
-                        application.onLineRecieved(cpy);
-                    });
+                while ((line = reader.readLine()) != null) {
+                    application.onLineRecieved(line);
                 }
             }
         } catch (IOException ex) {
             Logger.getLogger(BTComm.class.getName()).log(Level.SEVERE, null, ex);
+            application.addMessage(ex.getLocalizedMessage());
         }
     }
-    
-    public synchronized void writeln(String line) throws IOException{
-        if(writer != null){
+
+    public synchronized void writeln(String line) throws IOException {
+        if (writer != null) {
             System.out.println("writing line: " + line);
             writer.write(line);
             writer.newLine();
