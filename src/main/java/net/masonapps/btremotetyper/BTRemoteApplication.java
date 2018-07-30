@@ -142,10 +142,22 @@ public class BTRemoteApplication extends javax.swing.JFrame {
     public void onLineRecieved(final String line) {
         System.out.println("line recieved: " + line);
         SwingUtilities.invokeLater(() -> {
-            if (line.startsWith("p:") && line.length() > 2) {
-                String str = line.substring(2);
-                addMessage("typing: " + str);
-                robotTyper.type(str);
+            System.out.println(line);
+            if (line.length() > 2) {
+                if (line.startsWith("p:")) {
+                    String str = line.substring(2);
+                    addMessage("robot typing: " + str);
+                    robotTyper.type(str);
+                } else if (line.startsWith("s:")) {
+                    String str = line.substring(2);
+                    if (str.equals("enter")) {
+                        addMessage("robot typing: Enter Key");
+                        robotTyper.type('\n');
+                    } else if (str.equals("r_tab")) {
+                        addMessage("robot typing: Shift Tab");
+                        robotTyper.reverseTab();
+                    }
+                }
             }
         });
     }
@@ -167,21 +179,7 @@ public class BTRemoteApplication extends javax.swing.JFrame {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String line = "";
                 while ((line = reader.readLine()) != null) {
-                    System.out.println(line);
-                    if (line.startsWith("p:")) {
-                        String str = line.substring(2);
-                        System.out.println("robot typing: " + str);
-                        robotTyper.type(str);
-                    } else if (line.startsWith("s:")) {
-                        String str = line.substring(2); 
-                        if (str.equals("enter")) {
-                            System.out.println("robot typing: Enter Key");
-                            robotTyper.type('\n');
-                        } else if (str.equals("r_tab")) {
-                            System.out.println("robot typing: Shift Tab");
-                            robotTyper.reverseTab();
-                        }
-                    }
+                    onLineRecieved(line);
                 }
             }
         } catch (Exception ex) {
