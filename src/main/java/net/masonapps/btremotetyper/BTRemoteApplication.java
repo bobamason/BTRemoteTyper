@@ -172,6 +172,15 @@ public class BTRemoteApplication extends javax.swing.JFrame {
                         String str = line.substring(2);
                         System.out.println("robot typing: " + str);
                         robotTyper.type(str);
+                    } else if (line.startsWith("s:")) {
+                        String str = line.substring(2); 
+                        if (str.equals("enter")) {
+                            System.out.println("robot typing: Enter Key");
+                            robotTyper.type('\n');
+                        } else if (str.equals("r_tab")) {
+                            System.out.println("robot typing: Shift Tab");
+                            robotTyper.reverseTab();
+                        }
                     }
                 }
             }
